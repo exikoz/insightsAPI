@@ -3,6 +3,14 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
+
+## Ignore Python files
+python/*
+
+# Ignorera testresultat and error-logs
+test_results*.txt
+*error*.txt
+
 # dotenv files
 .env
 
