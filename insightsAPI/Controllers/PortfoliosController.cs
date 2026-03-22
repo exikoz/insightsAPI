@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using insightsAPI.Models.DTOs;
 using insightsAPI.Services;
+using Asp.Versioning;
 
 namespace insightsAPI.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
+    [ApiVersion("1.0")]
+    [Route("api/v{version:apiVersion}/[controller]")]
     public class PortfoliosController : ControllerBase
     {
         private readonly ICompanyInsightService _insightService;
@@ -17,7 +19,18 @@ namespace insightsAPI.Controllers
             _logger = logger;
         }
 
+        /// <summary>
+        /// Analyzes an entire portfolio of companies based on their organization numbers.
+        /// </summary>
+        /// <param name="req">List of organization numbers and sorting preferences</param>
+        /// <returns>Analysis of all companies in the portfolio and any encountered errors.</returns>
+        /// <response code="200">Returns a complete portfolio analysis</response>
+        /// <response code="400">If input is invalid (validation error)</response>
+        /// <response code="422">If the list is empty or exceeds the maximum number of elements</response>
         [HttpPost("analyze")]
+        [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
         public async Task<IActionResult> AnalyzePortfolio([FromBody] PortfolioRequestDto req)
         {
             if (req.OrgnrLista == null || !req.OrgnrLista.Any() || req.OrgnrLista.Count > 200)

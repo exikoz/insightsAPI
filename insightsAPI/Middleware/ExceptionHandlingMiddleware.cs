@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using System.Net;
 using System.Text.Json;
 
@@ -29,30 +30,37 @@ namespace insightsAPI.Middleware
 
         private static Task HandleExceptionAsync(HttpContext context, Exception exception)
         {
-            context.Response.ContentType = "application/json";
-            
-            // Allow throwing specific custom exceptions in the future to map to 404, 422, etc.
+            context.Response.ContentType = "application/problem+json";
+
+            var problemDetails = new ProblemDetails
+            {
+                Instance = context.Request.Path,
+                Detail = exception.Message // Detailed message
+            };
+
             if (exception is BadHttpRequestException or ArgumentException)
             {
-                context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                problemDetails.Status = (int)HttpStatusCode.BadRequest;
+                problemDetails.Title = "Bad Request";
+                problemDetails.Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1";
             }
             else if (exception is KeyNotFoundException)
             {
-                context.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                problemDetails.Status = (int)HttpStatusCode.NotFound;
+                problemDetails.Title = "Not Found";
+                problemDetails.Type = "https://tools.ietf.org/html/rfc7231#section-6.5.4";
             }
             else
             {
-                context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                problemDetails.Status = (int)HttpStatusCode.InternalServerError;
+                problemDetails.Title = "Internal Server Error";
+                problemDetails.Type = "https://tools.ietf.org/html/rfc7231#section-6.6.1";
+                problemDetails.Detail = "Internal Server Error from the custom middleware."; // Hide internal error in 500
             }
 
-            var response = new
-            {
-                StatusCode = context.Response.StatusCode,
-                Message = context.Response.StatusCode == 500 ? "Internal Server Error from the custom middleware." : exception.Message,
-                Detailed = exception.Message // For debugging, usually omit in prod, keeping it here for API parity with python MVP's FastAPI exceptions which leak details
-            };
+            context.Response.StatusCode = problemDetails.Status.Value;
 
-            return context.Response.WriteAsync(JsonSerializer.Serialize(response));
+            return context.Response.WriteAsync(JsonSerializer.Serialize(problemDetails));
         }
     }
 }

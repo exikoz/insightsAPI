@@ -10,6 +10,8 @@ python/*
 # Ignorera testresultat and error-logs
 test_results*.txt
 *error*.txt
+build_log.txt
+
 
 # dotenv files
 .env
