@@ -1,6 +1,36 @@
 # Insights API (.NET 9)
 
-This repository contains a C# .NET 9 Web API. It follows **Clean Architecture** and **SOLID** principles, providing high-performance financial analysis, automated data ingestion, and AI-driven insights.
+**Business Intelligence for Swedish SME Companies**
+
+Many Swedish SMEs make critical decisions about their customers, competition, and market without access to proper data—a privilege usually reserved for large enterprises with expensive consultant systems. 
+
+**Insights API** levels the playing field. It aggregates open government data from agencies like **Bolagsverket** and **SCB** (Statistics Sweden), and combines it to deliver new, actionable insights that neither source could produce alone—all served via a simple RESTful API.
+
+### The Core Value: Aggregation Creates New Data
+* **Bolagsverket provides:** *Company X has a revenue growth of +38% over the last 3 years.*
+* **SCB provides:** *The industry average for SNI 4120 (Construction) is growing at +4% per year.*
+* **Insights API realizes:** *Company X is growing 9x faster than the industry average → **Expansion Signal: HIGH**.*
+
+This repository contains the C# .NET 9 Web API. It follows **Clean Architecture** and **SOLID** principles, providing high-performance financial analysis, automated data ingestion, and AI-driven insights via Google Gemini.
+
+---
+
+## Table of Contents
+* [Grading Metrics (G vs VG Implementation)](#grading-metrics-g-vs-vg-implementation)
+  * [G (Pass) Requirements Met](#g-pass-requirements-met)
+  * [VG (Pass with Distinction) Requirements Met](#vg-pass-with-distinction-requirements-met)
+* [Architecture Overview](#architecture-overview)
+  * [Database Schema (ER Diagram)](#database-schema-er-diagram)
+* [Available Endpoints](#available-endpoints)
+  * [Companies](#companies)
+  * [Industries](#industries)
+  * [Portfolios](#portfolios)
+* [Local Installation & Setup](#local-installation--setup)
+  * [1. Build and Run the Project](#1-build-and-run-the-project)
+  * [2. Configure User Secrets](#2-configure-user-secrets)
+  * [3. Testing the API (Swagger UI)](#3-testing-the-api-swagger-ui)
+* [Performance Measurements (HybridCache)](#performance-measurements-hybridcache)
+* [Folder Structure](#folder-structure)
 
 ---
 
@@ -223,6 +253,13 @@ dotnet user-secrets set "Bolagsverket:ClientId" "YOUR_CLIENT_ID"
 dotnet user-secrets set "Bolagsverket:ClientSecret" "YOUR_CLIENT_SECRET"
 ```
 
+### 3. Testing the API (Swagger UI)
+When running in the `Development` environment, the API automatically generates full Open API documentation via Swagger. This represents the easiest way to view all available endpoints, parameter requirements, and to manually test requests.
+
+To access it, open your browser and navigate to:
+* `http://localhost:5000/swagger`
+* `https://localhost:5001/swagger`
+
 ---
 
 ## Performance Measurements (HybridCache)
@@ -241,7 +278,7 @@ To reduce how many times the database is queried, I implemented **.NET 9 HybridC
 ---
 
 ## Folder Structure
-* `/Data/DataSeeder.cs`: Loads initial data and seeds the database.
-* `/Services/FinancialAnalyzerService.cs`: Core logic for the financial math and performance calculations.
-* `/Services/ScoringEngine.cs`: Compares calculated KPIs against industry benchmarks to generate Risk and Opportunity scores.
-* `/Controllers/`: Contains the versioned API endpoints (`v1`).
+* `/insightsAPI/Data/DataSeeder.cs`: Loads initial data and seeds the database.
+* `/insightsAPI/Services/`: Core logic for the financial math, performance calculations, and scoring engine.
+* `/insightsAPI/Controllers/`: Contains the versioned API endpoints (`v1`).
+* `/insightsAPI.Tests/`: Contains the xUnit test projects, including `FinancialAnalyzerServiceTests` and `ScoringEngineTests`.
