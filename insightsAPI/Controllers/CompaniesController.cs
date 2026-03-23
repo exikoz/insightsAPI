@@ -146,22 +146,47 @@ namespace insightsAPI.Controllers
         /// <response code="404">If the company is not found</response>
         [HttpPut("{orgNr}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> UpdateCompany(string orgNr, [FromBody] CompanyResponseDto dto)
+        public async Task<IActionResult> UpdateCompany(string orgNr, [FromBody] UpdateCompanyRequestDto dto)
         {
             var cleanOrgnr = orgNr.Replace("-", "").Replace(" ", "").Trim();
             var company = await _context.Companies.FindAsync(cleanOrgnr);
             
             if (company == null) return NotFound(new { error = $"Bolag med orgnr {orgNr} hittades inte." });
 
-            // Simulate updating some fields
             company.Namn = dto.Namn;
             company.Postort = dto.Postort;
             company.Aktiv = dto.Aktiv;
             
             await _context.SaveChangesAsync();
 
-            // VG Krav: Invalidate Cache by Tag ("Eviction by tag")
+            // VG: Invalidate Cache by Tag ("Eviction by tag")
+            await _cache.RemoveByTagAsync("companies_list");
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Deletes a company and all related data. Invalidates the company list cache.
+        /// </summary>
+        /// <param name="orgNr">The company's organization number</param>
+        /// <response code="204">Company deleted successfully</response>
+        /// <response code="404">If the company is not found</response>
+        [HttpDelete("{orgNr}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DeleteCompany(string orgNr)
+        {
+            var cleanOrgnr = orgNr.Replace("-", "").Replace(" ", "").Trim();
+            var company = await _context.Companies.FindAsync(cleanOrgnr);
+
+            if (company == null) return NotFound(new { error = $"Bolag med orgnr {orgNr} hittades inte." });
+
+            _context.Companies.Remove(company);
+            await _context.SaveChangesAsync();
+
+            // VG: Invalidate Cache by Tag ("Eviction by tag")
             await _cache.RemoveByTagAsync("companies_list");
 
             return NoContent();

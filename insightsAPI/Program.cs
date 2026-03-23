@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using insightsAPI.Data;
+using insightsAPI.Extensions;
 using insightsAPI.Middleware;
 using insightsAPI.Models.Options;
 using insightsAPI.ApiClients;
@@ -53,16 +54,8 @@ builder.Services.AddHsts(options =>
     options.MaxAge = TimeSpan.FromDays(365);
 });
 
-// CORS Policy
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowSpecificOrigin", policy =>
-    {
-        policy.WithOrigins("http://localhost:3000")
-            .AllowAnyHeader()
-            .AllowAnyMethod();
-    });
-});
+// CORS Policy (configured via Extension Method)
+builder.Services.AddCustomCors();
 
 // Rate Limiting
 builder.Services.AddRateLimiter(options =>

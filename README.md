@@ -29,7 +29,6 @@ This repository contains the C# .NET 9 Web API. It follows **Clean Architecture*
   * [1. Build and Run the Project](#1-build-and-run-the-project)
   * [2. Configure User Secrets](#2-configure-user-secrets)
   * [3. Testing the API (Swagger UI)](#3-testing-the-api-swagger-ui)
-* [Performance Measurements (HybridCache)](#performance-measurements-hybridcache)
 * [Folder Structure](#folder-structure)
 
 ---
@@ -39,9 +38,15 @@ This repository contains the C# .NET 9 Web API. It follows **Clean Architecture*
 This project has been built to meet the requirements for both the passing grade (G) and the highest grade (VG), focusing on good architecture and stability.
 
 ### G (Pass) Requirements Met
-* **Functional REST API:** Uses clear `GET` and `POST` routes that follow REST standards.
-* **Database Integration:** Uses Entity Framework Core to map data into a structured SQL Server Database with proper relationships.
-* **External Integration:** Communicates with the Bolagsverket and Google Gemini APIs using HTTP.
+* **RESTful Design:** All endpoints use plural nouns (`/api/v1/Companies`, `/api/v1/Industries`) and correct HTTP methods (`GET`, `POST`, `PUT`, `DELETE`).
+* **DTOs:** Database entities are never exposed directly. All input and output uses dedicated Data Transfer Objects.
+* **Filtering & Pagination:** List endpoints support query parameters for filtering (e.g., `?sniKod=...&postort=...`) and offset-based pagination with metadata (`page`, `pageSize`, `totalCount`, `totalPages`).
+* **Input Validation:** Incoming DTOs use Data Annotations (`[Required]`, `[StringLength]`, `[Range]`, `[MaxLength]`) to ensure invalid requests return `400 Bad Request`.
+* **CORS Policy:** A specific CORS policy is configured via an Extension Method (`AddCustomCors()`) — does not use `AllowAnyOrigin`.
+* **Secrets Management:** No API keys or passwords are hardcoded. All secrets are stored using .NET User Secrets and loaded via the Options Pattern.
+* **Rate Limiting:** A Fixed Window Rate Limiter (IP-partitioned, 100 req/min) protects the API against overload and returns `429 Too Many Requests` with a `Retry-After` header.
+* **Caching:** .NET 9 HybridCache is applied on the company list endpoint to reduce database queries.
+* **External API Integration:** Two external services (Bolagsverket and Google Gemini) are integrated using `IHttpClientFactory` with Typed Clients. Both include authentication and error handling via `EnsureSuccessStatusCode()`.
 
 ---
 
@@ -84,23 +89,31 @@ public void ComputeKpis_ShouldHandleDivisionByZeroGracefully()
 }
 ```
 
-#### 3. Global Error Handling
-When the app encounters a problem, it shouldn't show a messy error screen to the user. I created a custom Middleware that catches exceptions and turns them into a clean JSON response.
+#### 3. Global Error Handling (RFC 7807 ProblemDetails)
+When the app encounters a problem, it shouldn't show a messy error screen to the user. I created a custom Middleware that catches exceptions, logs them via `ILogger`, and returns a structured `ProblemDetails` response following the RFC 7807 standard.
 
 ```csharp
 // ExceptionHandlingMiddleware.cs
 private static Task HandleExceptionAsync(HttpContext context, Exception exception)
 {
-    context.Response.ContentType = "application/json";
-    
-    // Example: Return 404 Status if data is missing.
-    if (exception is KeyNotFoundException) {
-        context.Response.StatusCode = (int)HttpStatusCode.NotFound;
-    } else {
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+    context.Response.ContentType = "application/problem+json";
+
+    var problemDetails = new ProblemDetails
+    {
+        Instance = context.Request.Path,
+        Detail = exception.Message
+    };
+
+    if (exception is KeyNotFoundException)
+    {
+        problemDetails.Status = (int)HttpStatusCode.NotFound;
+        problemDetails.Title = "Not Found";
+        problemDetails.Type = "https://tools.ietf.org/html/rfc7231#section-6.5.4";
     }
-    
-    return context.Response.WriteAsync(JsonSerializer.Serialize(new { error = exception.Message }));
+    // ... Maps other exception types to 400 and 500 with correct RFC type links
+
+    context.Response.StatusCode = problemDetails.Status.Value;
+    return context.Response.WriteAsync(JsonSerializer.Serialize(problemDetails));
 }
 ```
 
@@ -207,9 +220,10 @@ erDiagram
 The API is fully versioned (v1) and has the following RESTful endpoints:
 
 ### Companies
-* `GET /api/v1/Companies`: Gets a list of companies. Supports passing query parameters `?page=1&pageSize=20&sniKod=...&postort=...`
+* `GET /api/v1/Companies`: Gets a list of companies. Supports query parameters `?page=1&pageSize=20&sniKod=...&postort=...` with pagination metadata in the response.
 * `GET /api/v1/Companies/{orgNr}`: Gets details for a specific company by its organization number.
-* `PUT /api/v1/Companies/{orgNr}`: Updates specific company information and clears the cache.
+* `PUT /api/v1/Companies/{orgNr}`: Updates company information. Requires a validated request body (`UpdateCompanyRequestDto`) and invalidates the list cache on success.
+* `DELETE /api/v1/Companies/{orgNr}`: Deletes a company and its related data. Invalidates the list cache on success.
 * `POST /api/v1/Companies/{orgNr}/analyze`: Performs a deep financial analysis on a given company's data.
 * `POST /api/v1/Companies/{orgNr}/insight`: Asks Google Gemini to generate an AI-driven business insight based on the company's financial analysis.
 
@@ -259,21 +273,6 @@ When running in the `Development` environment, the API automatically generates f
 To access it, open your browser and navigate to:
 * `http://localhost:5000/swagger`
 * `https://localhost:5001/swagger`
-
----
-
-## Performance Measurements (HybridCache)
-
-To reduce how many times the database is queried, I implemented **.NET 9 HybridCache** on the company list endpoint (`GET /api/v1/companies`). The cache is excellent at handling large amounts of data and prevents "Cache Stampedes".
-
-**Endpoint tested:** `GET /api/v1/companies?page=1&pageSize=20`
-
-| State | Average Response Time (ms) | Description |
-| :--- | :--- | :--- |
-| **Cache Miss** | ~145 ms | The first request. The server queries the SQL database, handles pagination, and returns the result. |
-| **Cache Hit** | ~5 ms | Following requests. The data is fetched directly from memory via HybridCache, safely avoiding the database. |
-
-*This performance boost makes the cached requests approximately **2800% faster**.*
 
 ---
 
