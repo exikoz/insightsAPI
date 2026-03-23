@@ -2,9 +2,9 @@
 
 **Business Intelligence for Swedish SME Companies**
 
-Many Swedish SMEs make critical decisions about their customers, competition, and market without access to proper data—a privilege usually reserved for large enterprises with expensive consultant systems. 
+Many Swedish SMEs make critical decisions about their customers, competition, and market without access to proper data a privilege usually reserved for large enterprises with expensive consultant systems. 
 
-**Insights API** levels the playing field. It aggregates open government data from agencies like **Bolagsverket** and **SCB** (Statistics Sweden), and combines it to deliver new, actionable insights that neither source could produce alone—all served via a simple RESTful API.
+**Insights API** levels the playing field. It aggregates open government data from agencies like **Bolagsverket** and **SCB** (Statistics Sweden), and combines it to deliver new, actionable insights that neither source could produce alone all served via a simple RESTful API.
 
 ### The Core Value: Aggregation Creates New Data
 * **Bolagsverket provides:** *Company X has a revenue growth of +38% over the last 3 years.*
