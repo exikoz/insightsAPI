@@ -31,8 +31,6 @@ This repository contains the C# .NET 9 Web API. It follows **Clean Architecture*
   * [3. Performance Metrics - Caching](#3-performance-metrics---caching)
   * [4. Testing the API (Swagger UI)](#4-testing-the-api-swagger-ui)
 * [Folder Structure](#folder-structure)
-  * [3. Testing the API (Swagger UI)](#3-testing-the-api-swagger-ui)
-* [Folder Structure](#folder-structure)
 
 ---
 
