@@ -28,6 +28,9 @@ This repository contains the C# .NET 9 Web API. It follows **Clean Architecture*
 * [Local Installation & Setup](#local-installation--setup)
   * [1. Build and Run the Project](#1-build-and-run-the-project)
   * [2. Configure User Secrets](#2-configure-user-secrets)
+  * [3. Performance Metrics - Caching](#3-performance-metrics---caching)
+  * [4. Testing the API (Swagger UI)](#4-testing-the-api-swagger-ui)
+* [Folder Structure](#folder-structure)
   * [3. Testing the API (Swagger UI)](#3-testing-the-api-swagger-ui)
 * [Folder Structure](#folder-structure)
 
@@ -267,7 +270,33 @@ dotnet user-secrets set "Bolagsverket:ClientId" "YOUR_CLIENT_ID"
 dotnet user-secrets set "Bolagsverket:ClientSecret" "YOUR_CLIENT_SECRET"
 ```
 
-### 3. Testing the API (Swagger UI)
+### 3. Performance Metrics - Caching
+
+The API uses .NET 9 HybridCache on the company list endpoint to dramatically improve response times by storing query results in memory.
+
+**Endpoint tested:** `GET /api/v1/companies?page=1&pageSize=20`
+
+**Measurement method:** Postman was used to measure response times. The "Time" value shown in the bottom-right corner of Postman after each request was recorded.
+
+| Scenario | Response Time | Description |
+|----------|--------------|-------------|
+| **Cache Miss** | **208 ms** | First request - data fetched from SQL Server database |
+| **Cache Hit** | **4 ms** | Second request - data served directly from memory cache |
+| **Improvement** | **~98% faster** | 52x performance gain from caching |
+
+**How it works:**
+- The first request queries the database and stores the result in HybridCache with a 10-minute expiration
+- Subsequent identical requests within 10 minutes are served instantly from memory
+- The cache is automatically invalidated (cleared) when companies are updated or deleted via `PUT` or `DELETE` operations, ensuring clients never receive stale data
+
+**Cache invalidation example:**
+```csharp
+// CompaniesController.cs - PUT endpoint
+await _context.SaveChangesAsync();
+await _cache.RemoveByTagAsync("companies_list"); // Clears all cached company lists
+```
+
+### 4. Testing the API (Swagger UI)
 When running in the `Development` environment, the API automatically generates full Open API documentation via Swagger. This represents the easiest way to view all available endpoints, parameter requirements, and to manually test requests.
 
 To access it, open your browser and navigate to:
